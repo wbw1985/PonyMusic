@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.provider.BaseColumns;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -75,7 +76,10 @@ public class MusicUtils {
             String path = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.AudioColumns.DATA));
             String fileName = cursor.getString((cursor.getColumnIndex(MediaStore.Audio.AudioColumns.DISPLAY_NAME)));
             long fileSize = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.SIZE));
-
+            Log.i("localmusiclist", "fileName=" + fileName);
+            if (!fileName.contains("mp3")) {
+                continue;
+            }
             Music music = new Music();
             music.setSongId(id);
             music.setType(Music.Type.LOCAL);
@@ -109,5 +113,18 @@ public class MusicUtils {
 
     private static boolean isIntentAvailable(Context context, Intent intent) {
         return context.getPackageManager().resolveActivity(intent, PackageManager.GET_RESOLVED_FILTER) != null;
+    }
+
+    /*
+    * Java文件操作 获取文件扩展名
+    */
+    public static String getExtensionName(String filename) {
+        if ((filename != null) && (filename.length() > 0)) {
+            int dot = filename.lastIndexOf('.');
+            if ((dot > -1) && (dot < (filename.length() - 1))) {
+                return filename.substring(dot + 1);
+            }
+        }
+        return filename;
     }
 }

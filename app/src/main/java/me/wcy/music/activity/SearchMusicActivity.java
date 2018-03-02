@@ -1,8 +1,11 @@
 package me.wcy.music.activity;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.SearchView;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.AdapterView;
@@ -20,7 +23,6 @@ import me.wcy.music.R;
 import me.wcy.music.adapter.OnMoreClickListener;
 import me.wcy.music.adapter.SearchMusicAdapter;
 import me.wcy.music.enums.LoadStateEnum;
-import me.wcy.music.executor.DownloadSearchedMusic;
 import me.wcy.music.executor.PlaySearchedMusic;
 import me.wcy.music.executor.ShareOnlineMusic;
 import me.wcy.music.http.HttpCallback;
@@ -43,11 +45,30 @@ public class SearchMusicActivity extends BaseActivity implements SearchView.OnQu
     private LinearLayout llLoadFail;
     private List<SearchMusic.Song> searchMusicList = new ArrayList<>();
     private SearchMusicAdapter mAdapter = new SearchMusicAdapter(searchMusicList);
-
+    private String searchString;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search_music);
+        searchString = null;
+        Intent intent = getIntent();
+        if (null != intent) {
+            Uri uri = intent.getData();
+            if (uri == null) {
+                return;
+            }
+            searchString = uri.getQueryParameter("action");
+//            String musicName = ""; //歌手－歌名
+//            if (wakeupStr.contains("播放") && wakeupStr.contains("的音乐")) {//播放＊＊＊的音乐
+//                musicName = wakeupStr.substring(wakeupStr.indexOf("播放") + 2 , wakeupStr.indexOf("的音乐"));
+//            } else if (wakeupStr.contains("播放") && wakeupStr.contains("的歌曲")) {//播放＊＊的＊＊   播放许巍的歌曲
+//                musicName = wakeupStr.substring(wakeupStr.indexOf("播放") + 2 , wakeupStr.indexOf("的歌曲"));
+//            } else if (wakeupStr.contains("播放") && wakeupStr.contains("的")) {//播放＊＊的＊＊   播放许巍的故乡
+//                musicName = wakeupStr.substring(wakeupStr.indexOf("播放") + 2 , wakeupStr.indexOf("的"));
+//                musicName += "-" + wakeupStr.substring(wakeupStr.indexOf("的") + 1);
+//            }
+            Log.i("searchString", "searchString=" + searchString);
+        }
     }
 
     @Override
@@ -69,6 +90,7 @@ public class SearchMusicActivity extends BaseActivity implements SearchView.OnQu
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_search_music, menu);
         SearchView searchView = (SearchView) menu.findItem(R.id.action_search).getActionView();
+
         searchView.setMaxWidth(Integer.MAX_VALUE);
         searchView.onActionViewExpanded();
         searchView.setQueryHint(getString(R.string.search_tips));
@@ -81,6 +103,16 @@ public class SearchMusicActivity extends BaseActivity implements SearchView.OnQu
             mGoButton.setImageResource(R.drawable.ic_menu_search);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+
+        if (searchString != null) {
+            if (searchString.contains("-")) {
+                String musicName = searchString.substring(searchString.indexOf("-") + 1);
+                searchView.setQuery(musicName, true);
+            } else  {
+                searchView.setQuery(searchString, true);
+            }
+
         }
         return super.onCreateOptionsMenu(menu);
     }
@@ -98,6 +130,18 @@ public class SearchMusicActivity extends BaseActivity implements SearchView.OnQu
     }
 
     private void searchMusic(String keyword) {
+//        HttpClientWangyi.searchMusic(keyword, new HttpCallback<SearchMusic>() {
+//            @Override
+//            public void onSuccess(SearchMusic searchMusic) {
+//
+//            }
+//
+//            @Override
+//            public void onFail(Exception e) {
+//
+//            }
+//        });
+
         HttpClient.searchMusic(keyword, new HttpCallback<SearchMusic>() {
             @Override
             public void onSuccess(SearchMusic response) {
@@ -107,10 +151,47 @@ public class SearchMusicActivity extends BaseActivity implements SearchView.OnQu
                 }
                 ViewUtils.changeViewState(lvSearchMusic, llLoading, llLoadFail, LoadStateEnum.LOAD_SUCCESS);
                 searchMusicList.clear();
-                searchMusicList.addAll(response.getSong());
+                List<SearchMusic.Song> searchlist = response.getSong();
+                if (searchString != null) {
+                    if (searchString.contains("-")) {
+                        String musicArtist = searchString.substring(0,searchString.indexOf("-"));
+                        Log.i("searchlist", "musicArtist=" + musicArtist);
+                        int size = searchlist.size();
+                        for (int i = 0; i < size; i++) {
+                            SearchMusic.Song song = searchlist.get(i);
+                            String name = song.getArtistname();
+                            Log.i("searchlist", "name=" + name);
+                            if (name.contains("musicArtist") || musicArtist.contains(name)) {
+                                searchlist.clear();
+                                searchlist.add(song);
+                                break;
+                            }
+                        }
+                    } else {
+                        int size = searchlist.size();
+                        for (int i = 0; i < size; i++) {
+                            SearchMusic.Song song = searchlist.get(i);
+                            String name = song.getSongname();
+                            Log.i("searchlist", "name=" + name);
+                            if (name.contains(searchString) || searchString.contains(name)) {
+                                searchlist.clear();
+                                searchlist.add(song);
+                                break;
+                            }
+                        }
+                    }
+
+                }
+                searchMusicList.addAll(searchlist);
                 mAdapter.notifyDataSetChanged();
                 lvSearchMusic.requestFocus();
                 handler.post(() -> lvSearchMusic.setSelection(0));
+                if (searchString != null) {
+//                    listView.performItemClick(listView.getAdapter().getView(click_position, null, null), click_position, listView.(click_position));
+                    lvSearchMusic.performItemClick(lvSearchMusic.getChildAt(0), 0, lvSearchMusic.getItemIdAtPosition(0));
+//                    lvSearchMusic.performItemClick(lvSearchMusic.getAdapter().getView(0,null,null), 0, lvSearchMusic.getItemIdAtPosition(0));
+//                    finish();
+                }
             }
 
             @Override
@@ -157,7 +238,7 @@ public class SearchMusicActivity extends BaseActivity implements SearchView.OnQu
                     share(song);
                     break;
                 case 1:// 下载
-                    download(song);
+//                    download(song);
                     break;
             }
         });
@@ -183,24 +264,24 @@ public class SearchMusicActivity extends BaseActivity implements SearchView.OnQu
         }.execute();
     }
 
-    private void download(final SearchMusic.Song song) {
-        new DownloadSearchedMusic(this, song) {
-            @Override
-            public void onPrepare() {
-                showProgress();
-            }
-
-            @Override
-            public void onExecuteSuccess(Void aVoid) {
-                cancelProgress();
-                ToastUtils.show(getString(R.string.now_download, song.getSongname()));
-            }
-
-            @Override
-            public void onExecuteFail(Exception e) {
-                cancelProgress();
-                ToastUtils.show(R.string.unable_to_download);
-            }
-        }.execute();
-    }
+//    private void download(final SearchMusic.Song song) {
+//        new DownloadSearchedMusic(this, song) {
+//            @Override
+//            public void onPrepare() {
+//                showProgress();
+//            }
+//
+//            @Override
+//            public void onExecuteSuccess(Void aVoid) {
+//                cancelProgress();
+//                ToastUtils.show(getString(R.string.now_download, song.getSongname()));
+//            }
+//
+//            @Override
+//            public void onExecuteFail(Exception e) {
+//                cancelProgress();
+//                ToastUtils.show(R.string.unable_to_download);
+//            }
+//        }.execute();
+//    }
 }

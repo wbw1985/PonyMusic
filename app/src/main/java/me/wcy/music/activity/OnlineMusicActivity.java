@@ -26,7 +26,6 @@ import me.wcy.music.adapter.OnMoreClickListener;
 import me.wcy.music.adapter.OnlineMusicAdapter;
 import me.wcy.music.constants.Extras;
 import me.wcy.music.enums.LoadStateEnum;
-import me.wcy.music.executor.DownloadOnlineMusic;
 import me.wcy.music.executor.PlayOnlineMusic;
 import me.wcy.music.executor.ShareOnlineMusic;
 import me.wcy.music.http.HttpCallback;
@@ -155,7 +154,7 @@ public class OnlineMusicActivity extends BaseActivity implements OnItemClickList
                     artistInfo(onlineMusic);
                     break;
                 case 2:// 下载
-                    download(onlineMusic);
+//                    download(onlineMusic);
                     break;
             }
         });
@@ -231,24 +230,24 @@ public class OnlineMusicActivity extends BaseActivity implements OnItemClickList
         ArtistInfoActivity.start(this, onlineMusic.getTing_uid());
     }
 
-    private void download(final OnlineMusic onlineMusic) {
-        new DownloadOnlineMusic(this, onlineMusic) {
-            @Override
-            public void onPrepare() {
-                showProgress();
-            }
-
-            @Override
-            public void onExecuteSuccess(Void aVoid) {
-                cancelProgress();
-                ToastUtils.show(getString(R.string.now_download, onlineMusic.getTitle()));
-            }
-
-            @Override
-            public void onExecuteFail(Exception e) {
-                cancelProgress();
-                ToastUtils.show(R.string.unable_to_download);
-            }
-        }.execute();
-    }
+//    private void download(final OnlineMusic onlineMusic) {
+//        new DownloadOnlineMusic(this, onlineMusic) {
+//            @Override
+//            public void onPrepare() {
+//                showProgress();
+//            }
+//
+//            @Override
+//            public void onExecuteSuccess(Void aVoid) {
+//                cancelProgress();
+//                ToastUtils.show(getString(R.string.now_download, onlineMusic.getTitle()));
+//            }
+//
+//            @Override
+//            public void onExecuteFail(Exception e) {
+//                cancelProgress();
+//                ToastUtils.show(R.string.unable_to_download);
+//            }
+//        }.execute();
+//    }
 }
